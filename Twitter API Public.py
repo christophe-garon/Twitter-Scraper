@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[25]:
+# In[57]:
 
 
 import pandas as pd
@@ -65,7 +65,7 @@ def get_blacklist():
             print("Hmmm...blacklisted words can only be single words, not phrases. Let's try that again.")
 
 
-# In[45]:
+# In[58]:
 
 
 def format_usernames():
@@ -136,7 +136,7 @@ def format_usernames():
    return usernames_one, usernames_two, usernames_three, usernames_four, usernames_five, usernames_six
 
 
-# In[47]:
+# In[59]:
 
 
 try:
@@ -165,16 +165,10 @@ except IOError:
     
     usernames_one, usernames_two, usernames_three, usernames_four, usernames_five, usernames_six = format_usernames()
         
-    print("Your twitter settings are all setup! You can edit these search settings directly    through the file named 'twitter_settings.csv'. You can find this file at " + filename)
+    print("Your twitter settings are all setup! You can edit these search settings directly through the file named 'twitter_settings.csv'. You can find this file at " + filename)
 
 
-# In[51]:
-
-
-usernames_two
-
-
-# In[32]:
+# In[60]:
 
 
 #Define your keys from the developer portal
@@ -191,7 +185,7 @@ b64_encoded_key = base64.b64encode(key_secret)
 b64_encoded_key = b64_encoded_key.decode('ascii')
 
 
-# In[33]:
+# In[61]:
 
 
 #Adding authorization to base URL 
@@ -217,348 +211,147 @@ search_headers = {
     'Authorization': 'Bearer {}'.format(access_token)}
 
 
-# In[34]:
+# In[62]:
 
 
-#Adding search parameters: ('OR' = or)('+' = and)('-' = not) *(space interpreted as &)
+def Call_api(username_group):
 
-search_params = {'q': usernames_one + " + " + keywords + " + " + blacklist,}
+    #Adding search parameters: ('OR' = or)('+' = and)('-' = not) *(space interpreted as &)
 
-#Adding Twitter search API to base URL
-search_url = '{}1.1/search/tweets.json'.format(base_url)
+    search_params = {'q': username_group + " + " + keywords + " + " + blacklist,}
 
-#Putting all elements together and execute request 
-resp_one = requests.get(search_url, headers=search_headers, params=search_params)
+    #Adding Twitter search API to base URL
+    search_url = '{}1.1/search/tweets.json'.format(base_url)
 
-
-#Get the data from the 1st request
-import json
-scrape_one = json.loads(resp_one.content)
-
-search_params
+    #Putting all elements together and execute request 
+    resp = requests.get(search_url, headers=search_headers, params=search_params)
 
 
-# In[35]:
+    #Get the data from the 1st request
+    import json
+    scrape = json.loads(resp.content)
+    
+        #Extracting desired data from 1st scrape as lists
+    users = []
+    tweet_dates = []
+    kw_tweets = []
 
 
-#Extracting desired data from 1st scrape as lists
-users = []
-tweet_dates = []
-kw_tweets = []
+    for tweet in scrape['statuses']:
+        users.append(tweet['user']['screen_name'])
+        kw_tweets.append(tweet['text'])
+        dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
+        tweet_dates.append(dates)
+        
+        
+    #Creating df1 via pandas
+    #Creating columns names and adding their data
+    scrape = {
+        "User" : users,
+        "Date" : tweet_dates,
+        "Tweet" : kw_tweets,   
+    }
+
+    #Create DataFrame
+    df = pd.DataFrame(scrape)
+    return df
 
 
-for tweet in scrape_one['statuses']:
-    users.append(tweet['user']['screen_name'])
-#     tweet['text'] = re.sub(r'RT @(\w+): ','', tweet['text'])
-    kw_tweets.append(tweet['text'])
-    dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
-    tweet_dates.append(dates)
+# In[63]:
 
 
-# In[36]:
+DataFrame = Call_api(usernames_one)
 
 
-#Creating df1 via pandas
-
-import pandas as pd
-
-#Creating columns names and adding their data
-scrape1 = {
-    "User" : users,
-    "Date" : tweet_dates,
-    "Tweet" : kw_tweets,   
-}
-
-#Create DataFrame
-df1 = pd.DataFrame(scrape1)
-df1
-
-
-# In[37]:
+# In[64]:
 
 
 if usernames_two != []:
     
-    #Call the API again for the remaining users
-
-    search_params = {'q': usernames_two + " + " + keywords + " + " + blacklist,}
-
-    #Adding Twitter search API to base URL
-    search_url = '{}1.1/search/tweets.json'.format(base_url)
-
-    #Putting all elements together and execute request 
-    resp_two = requests.get(search_url, headers=search_headers, params=search_params)
-
-
-    #Get the data from the 2st request
-    import json
-    scrape_two = json.loads(resp_two.content)
+    df = Call_api(usernames_two)
     
-    
-    #Extracting desired data from 2nd scrape as lists
-    users_two = []
-    tweet_dates_two = []
-    kw_tweets_two = []
-
-
-    for tweet in scrape_two['statuses']:
-        users_two.append(tweet['user']['screen_name'])
-    #     tweet['text'] = re.sub(r'RT @(\w+): ','', tweet['text']) 
-        kw_tweets_two.append(tweet['text'])
-        dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
-        tweet_dates_two.append(dates)
-
-        
-    #Create DataFrame two    
-    scrape2 = {
-            "User" : users_two,
-            "Date" : tweet_dates_two,
-            "Tweet" : kw_tweets_two
-    }
-
-    #Create DataFrame
-    df2 = pd.DataFrame(scrape2)
-    df2
-    
-    # Join DataFrames into one
-    join = pd.concat([df1,df2], ignore_index=True)
-    join
+    DataFrame = pd.concat([DataFrame,df], ignore_index=True)
 
     
 else:
-    join = df1
+    pass
 
 
-# In[38]:
+# In[65]:
 
 
 if usernames_three != []:
+  
+    df = Call_api(usernames_three)
     
-    #Call the API again for the remaining users
-
-    search_params = {'q': usernames_three + " + " + keywords + " + " + blacklist,}
-
-    #Adding Twitter search API to base URL
-    search_url = '{}1.1/search/tweets.json'.format(base_url)
-
-    #Putting all elements together and execute request 
-    resp_two = requests.get(search_url, headers=search_headers, params=search_params)
-
-
-    #Get the data from the 2st request
-    import json
-    scrape_two = json.loads(resp_two.content)
-    
-    
-    #Extracting desired data from 2nd scrape as lists
-    users_two = []
-    tweet_dates_two = []
-    kw_tweets_two = []
-
-
-    for tweet in scrape_two['statuses']:
-        users_two.append(tweet['user']['screen_name'])
-    #     tweet['text'] = re.sub(r'RT @(\w+): ','', tweet['text']) 
-        kw_tweets_two.append(tweet['text'])
-        dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
-        tweet_dates_two.append(dates)
-
-        
-    #Create DataFrame two    
-    scrape2 = {
-            "User" : users_two,
-            "Date" : tweet_dates_two,
-            "Tweet" : kw_tweets_two
-    }
-
-    #Create DataFrame
-    df3 = pd.DataFrame(scrape2)
-    df3
-    
-    # Join DataFrames into one
-    join = pd.concat([join,df3], ignore_index=True)
-    join
-
+    DataFrame = pd.concat([DataFrame,df], ignore_index=True)
     
 else:
     pass
 
 
-# In[39]:
+# In[66]:
 
 
 if usernames_four != []:
+  
+    df = Call_api(usernames_four)
     
-    #Call the API again for the remaining users
-
-    search_params = {'q': usernames_four + " + " + keywords + " + " + blacklist,}
-
-    #Adding Twitter search API to base URL
-    search_url = '{}1.1/search/tweets.json'.format(base_url)
-
-    #Putting all elements together and execute request 
-    resp_two = requests.get(search_url, headers=search_headers, params=search_params)
-
-
-    #Get the data from the 2st request
-    import json
-    scrape_two = json.loads(resp_two.content)
-    
-    
-    #Extracting desired data from 2nd scrape as lists
-    users_two = []
-    tweet_dates_two = []
-    kw_tweets_two = []
-
-
-    for tweet in scrape_two['statuses']:
-        users_two.append(tweet['user']['screen_name'])
-    #     tweet['text'] = re.sub(r'RT @(\w+): ','', tweet['text']) 
-        kw_tweets_two.append(tweet['text'])
-        dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
-        tweet_dates_two.append(dates)
-
-        
-    #Create DataFrame two    
-    scrape2 = {
-            "User" : users_two,
-            "Date" : tweet_dates_two,
-            "Tweet" : kw_tweets_two
-    }
-
-    #Create DataFrame
-    df4 = pd.DataFrame(scrape2)
-    df4
-    
-    # Join DataFrames into one
-    join = pd.concat([join,df4], ignore_index=True)
-    join
-
+    DataFrame = pd.concat([DataFrame,df], ignore_index=True)
     
 else:
     pass
 
 
-# In[40]:
+# In[67]:
 
 
 if usernames_five != []:
+  
+    df = Call_api(usernames_five)
     
-    #Call the API again for the remaining users
-
-    search_params = {'q': usernames_five + " + " + keywords + " + " + blacklist,}
-
-    #Adding Twitter search API to base URL
-    search_url = '{}1.1/search/tweets.json'.format(base_url)
-
-    #Putting all elements together and execute request 
-    resp_two = requests.get(search_url, headers=search_headers, params=search_params)
-
-
-    #Get the data from the 2st request
-    import json
-    scrape_two = json.loads(resp_two.content)
-    
-    
-    #Extracting desired data from 2nd scrape as lists
-    users_two = []
-    tweet_dates_two = []
-    kw_tweets_two = []
-
-
-    for tweet in scrape_two['statuses']:
-        users_two.append(tweet['user']['screen_name'])
-    #     tweet['text'] = re.sub(r'RT @(\w+): ','', tweet['text']) 
-        kw_tweets_two.append(tweet['text'])
-        dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
-        tweet_dates_two.append(dates)
-
-        
-    #Create DataFrame two    
-    scrape2 = {
-            "User" : users_two,
-            "Date" : tweet_dates_two,
-            "Tweet" : kw_tweets_two
-    }
-
-    #Create DataFrame
-    df5 = pd.DataFrame(scrape2)
-    df5
-    
-    # Join DataFrames into one
-    join = pd.concat([join,df5], ignore_index=True)
-    join
-
+    DataFrame = pd.concat([DataFrame,df], ignore_index=True)
     
 else:
     pass
 
 
-# In[41]:
+# In[68]:
 
 
 if usernames_six != []:
+  
+    df = Call_api(usernames_six)
     
-    #Call the API again for the remaining users
-
-    search_params = {'q': usernames_six + " + " + keywords + " + " + blacklist,}
-
-    #Adding Twitter search API to base URL
-    search_url = '{}1.1/search/tweets.json'.format(base_url)
-
-    #Putting all elements together and execute request 
-    resp_two = requests.get(search_url, headers=search_headers, params=search_params)
-
-
-    #Get the data from the 2st request
-    import json
-    scrape_two = json.loads(resp_two.content)
-    
-    
-    #Extracting desired data from 2nd scrape as lists
-    users_two = []
-    tweet_dates_two = []
-    kw_tweets_two = []
-
-
-    for tweet in scrape_two['statuses']:
-        users_two.append(tweet['user']['screen_name'])
-    #     tweet['text'] = re.sub(r'RT @(\w+): ','', tweet['text']) 
-        kw_tweets_two.append(tweet['text'])
-        dates = datetime.strptime(tweet['created_at'][4:-11], '%b %d %H:%M:%S').strftime('%m/%d %H:%M')
-        tweet_dates_two.append(dates)
-
-        
-    #Create DataFrame two    
-    scrape2 = {
-            "User" : users_two,
-            "Date" : tweet_dates_two,
-            "Tweet" : kw_tweets_two
-    }
-
-    #Create DataFrame
-    df6 = pd.DataFrame(scrape2)
-    df6
-    
-    # Join DataFrames into one
-    join = pd.concat([join,df6], ignore_index=True)
-    join
-
+    DataFrame = pd.concat([DataFrame,df], ignore_index=True)
     
 else:
     pass
 
 
-# In[42]:
+# In[69]:
+
+
+DataFrame
+
+
+# In[70]:
 
 
 # Remove any duplicate tweets and sort
 
-join['Tweet'].replace('(https://t.co)/(\w+)', r'\1', regex=True).drop_duplicates()
-tweets = join.loc[join['Tweet'].replace('(https://t.co)/(\w+)', r'\1', regex=True).drop_duplicates().index]
+DataFrame['Tweet'].replace('(https://t.co)/(\w+)', r'\1', regex=True).drop_duplicates()
+tweets = DataFrame.loc[DataFrame['Tweet'].replace('(https://t.co)/(\w+)', r'\1', regex=True).drop_duplicates().index]
 tweets = tweets.sort_values(by=['Date'], ascending=False)
 tweets.reset_index(drop=True, inplace=True)
 tweets
+
+
+# In[71]:
+
+
+#Export data to CSV file
+tweets.to_csv("kw_tweets.csv", encoding='utf-8', index=False)
 
 
 # In[43]:
@@ -568,13 +361,6 @@ tweets
 # writer = pd.ExcelWriter("kw_tweets.xlsx", engine='xlsxwriter')
 # df.to_excel(writer, index=False)
 # writer.save() 
-
-
-# In[44]:
-
-
-#Export data to CSV file
-tweets.to_csv("kw_tweets.csv", encoding='utf-8', index=False)
 
 
 
