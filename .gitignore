@@ -1,0 +1,10 @@
+*_credentials.txt
+.ipynb_checkpoints
+.DS_Store
+*.png
+*.xlsx
+venv/
+*.ipynb
+*.csv
+credentials.txt
+creds_full.txt
